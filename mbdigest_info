@@ -35,8 +35,6 @@ def parse_ns_server_log_file(file, agg={}, opts={}, &block)
 end
 
 def parse_ns_server_log_io(io, agg={}, opts={}, &block)
-  opts ||= {}
-
   line_max = opts[:max_lines] || -1
   line_prev = nil
 
@@ -130,7 +128,7 @@ if html
     agg_pids_idx = {} # Key is pid, value is index of pid in sorted agg_pids list.
     agg_pids.values.sort.each do |pid_info|
       pid = pid_info[1]
-      agg_pids_idx[pid] = agg_pids_idx[pid] || agg_pids_idx.size
+      agg_pids_idx[pid] = agg_pids_idx[pid] || (agg_pids_idx.size + 1)
     end
 
     out.write("<html>\n")
@@ -141,26 +139,32 @@ if html
 
       out.write("<h1>#{f}</h1>\n")
       out.write("<table>\n")
-      out.write("<tr><th>time</th><td>events\n")
+      out.write("<tr><th>time</th><th colspan=\"#{agg_pids_idx.size}\">events</th></tr>\n")
 
-      last_ymd = last_tms = pid = ""
+      last_ymd = last_tms = last_pid = row = nil
 
       i = 0
       pids, entries, lines = parse_ns_server_log_file(f, agg={}, opts={ :max_entries => MAX_ENTRIES }) do |x, entry|
         ymd, tms, pid = entry[0]
-        # print("#{ymd} #{tms} #{pid} ----- #{i}\n#{entry[1..-1]}\n")
+        if ymd and tms and pid
+          if ymd != last_ymd or tms != last_tms
+            if last_ymd and last_tms
+              out.write("<tr><td>#{last_ymd} #{last_tms}</td>\n<td>")
+              out.write(row.join("</td><td>"))
+              out.write("</td>\n</tr>\n")
+            end
 
-        if ymd != last_ymd or tms != last_tms
-          out.write("</td></tr>\n<tr><td>#{ymd} #{tms}</td>\n<td>\n")
+            row = Array.new(agg_pids_idx.size + 1, "")
+          end
+
+          row[agg_pids_idx[pid]] = "*"
+
+          last_ymd = ymd
+          last_tms = tms
+          last_pid = pid
+
+          i = dot(i)
         end
-
-        out.write("#{pid}\n")
-
-        last_ymd = ymd
-        last_tms = tms
-        last_pid = pid
-
-        i = dot(i)
       end
 
       out.write("<table>\n")
