@@ -9,6 +9,9 @@ def usage()
   print("  --html=<path/to/output-report.html>\n")
   print("    Emit a correlated analysis in html format.\n")
   print("\n")
+  print("  --max-entries=<MAX_ENTRIES>\n")
+  print("    Stop after processing MAX_ENTRIES in the log.\n")
+  print("\n")
   exit
 end
 
@@ -17,21 +20,17 @@ usage() if ARGV.include?('-h')
 
 # --------------------------------------------------------
 
-html = (ARGV.select {|x| x =~ /^--html/}[-1] || "").split('=')[1]
+html        = (ARGV.select {|x| x =~ /^--html/}[-1] || "").split('=')[1]
+MAX_ENTRIES = (ARGV.select {|x| x =~ /^--max-entries/}[-1] || "=-1").split('=')[1].to_i
 
 ns_server_logs = ARGV.select {|x| !x.match(/^--/)}
 ns_server_logs = ["ns_server.log"] if ns_server_logs.length <= 0
 
 print "mbdigest_info #{ns_server_logs}\n"
-print "\n"
 
 # --------------------------------------------------------
 
-def debug(msg)
-end
-
 def parse_ns_server_log_file(file, agg={}, opts={}, &block)
-  print "parsing #{file}\n"
   File.open(file, 'rb') {|io| parse_ns_server_log_io(io, agg, opts, &block)}
 end
 
@@ -99,9 +98,15 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
   print "MAX LINES REACHED: #{lines}\n" if line_max >= 0 and lines >= line_max
   print "MAX ENTRIES REACHED: #{entries}\n" if entry_max >= 0 and entries >= entry_max
 
-  print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
-
   return pids, entries, lines
+end
+
+def dot(i)
+  if i.modulo(1000) == 0
+    print(".")
+    STDOUT.flush
+  end
+  return i + 1
 end
 
 # --------------------------------------------------------
@@ -109,33 +114,60 @@ end
 agg = { :pids => {} } # Some aggregate tracking during first pass.
 
 ns_server_logs.each do |f|
+  print "processing #{f}\n"
+
   i = 0
-
-  parse_ns_server_log_file(f, agg=agg) do |i, entry|
-    ymd, tms, pid = entry[0]
-
-    if i.modulo(1000) == 0
-      print(".")
-      STDOUT.flush
-    end
-
-    i = i + 1
-
-    debug("#{ymd} #{tms} #{pid} ----- #{i}\n#{entry[1..-1]}\n")
+  pids, entries, lines = parse_ns_server_log_file(f, agg=agg, opts={ :max_entries => MAX_ENTRIES }) do |x, entry|
+    i = dot(i)
   end
+
+  print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
 end
 
 if html
   File.open(html, 'w') do |out|
-    pids = agg[:pids]
-    pids_idx = {}
-    pids.values.sort.each do |pid_info|
+    agg_pids = agg[:pids]
+    agg_pids_idx = {} # Key is pid, value is index of pid in sorted agg_pids list.
+    agg_pids.values.sort.each do |pid_info|
       pid = pid_info[1]
-      pids_idx[pid] = pids_idx[pid] || pids_idx.size
+      agg_pids_idx[pid] = agg_pids_idx[pid] || agg_pids_idx.size
     end
 
     out.write("<html>\n")
     out.write("<body>\n")
+
+    ns_server_logs.each do |f|
+      print "html-processing #{f}\n"
+
+      out.write("<h1>#{f}</h1>\n")
+      out.write("<table>\n")
+      out.write("<tr><th>time</th><td>events\n")
+
+      last_ymd = last_tms = pid = ""
+
+      i = 0
+      pids, entries, lines = parse_ns_server_log_file(f, agg={}, opts={ :max_entries => MAX_ENTRIES }) do |x, entry|
+        ymd, tms, pid = entry[0]
+        # print("#{ymd} #{tms} #{pid} ----- #{i}\n#{entry[1..-1]}\n")
+
+        if ymd != last_ymd or tms != last_tms
+          out.write("</td></tr>\n<tr><td>#{ymd} #{tms}</td>\n<td>\n")
+        end
+
+        out.write("#{pid}\n")
+
+        last_ymd = ymd
+        last_tms = tms
+        last_pid = pid
+
+        i = dot(i)
+      end
+
+      out.write("<table>\n")
+
+      print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
+    end
+
     out.write("</body>\n")
     out.write("</html>\n")
   end
