@@ -2,7 +2,13 @@
 
 def usage()
   print("mbdigest_info [options] ns_server.log ...\n")
+  print("\n")
   print("  -h / --help\n")
+  print("    Print this usage help message.\n")
+  print("\n")
+  print("  --html=<path/to/output-report.html>\n")
+  print("    Emit a correlated analysis in html format.\n")
+  print("\n")
   exit
 end
 
@@ -11,13 +17,18 @@ usage() if ARGV.include?('-h')
 
 # --------------------------------------------------------
 
-ns_server_logs = ARGV
+html = (ARGV.select {|x| x =~ /^--html/}[-1] || "").split('=')[1]
+
+ns_server_logs = ARGV.select {|x| !x.match(/^--/)}
 ns_server_logs = ["ns_server.log"] if ns_server_logs.length <= 0
 
 print "mbdigest_info #{ns_server_logs}\n"
 print "\n"
 
 # --------------------------------------------------------
+
+def debug(msg)
+end
 
 def parse_ns_server_log_file(file, agg={}, opts={}, &block)
   print "parsing #{file}\n"
@@ -88,7 +99,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
   print "MAX LINES REACHED: #{lines}\n" if line_max >= 0 and lines >= line_max
   print "MAX ENTRIES REACHED: #{entries}\n" if entry_max >= 0 and entries >= entry_max
 
-  print "DONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
+  print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
 
   return pids, entries, lines
 end
@@ -98,9 +109,36 @@ end
 agg = { :pids => {} } # Some aggregate tracking during first pass.
 
 ns_server_logs.each do |f|
+  i = 0
+
   parse_ns_server_log_file(f, agg=agg) do |i, entry|
     ymd, tms, pid = entry[0]
-    print "#{ymd} #{tms} #{pid} ----- #{i}\n#{entry[1..-1]}\n"
+
+    if i.modulo(1000) == 0
+      print(".")
+      STDOUT.flush
+    end
+
+    i = i + 1
+
+    debug("#{ymd} #{tms} #{pid} ----- #{i}\n#{entry[1..-1]}\n")
   end
 end
+
+if html
+  File.open(html, 'w') do |out|
+    pids = agg[:pids]
+    pids_idx = {}
+    pids.values.sort.each do |pid_info|
+      pid = pid_info[1]
+      pids_idx[pid] = pids_idx[pid] || pids_idx.size
+    end
+
+    out.write("<html>\n")
+    out.write("<body>\n")
+    out.write("</body>\n")
+    out.write("</html>\n")
+  end
+end
+
 
