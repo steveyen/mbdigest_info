@@ -1,0 +1,64 @@
+#!/usr/bin/env ruby
+
+ns_server_logs = ARGV[0] || ["ns_server.log"]
+
+print "mbdigest_info #{ns_server_logs}\n"
+print "\n"
+
+# --------------------------------------------------------
+
+def parse_ns_server_log_file(file, opts, &block)
+  print "parsing #{file}\n"
+  File.open(file, 'rb') {|io| parse_ns_server_log_io(io, opts, &block)}
+end
+
+def parse_ns_server_log_io(io, opts, &block)
+  opts ||= {}
+
+  line_max = opts[:max_lines] || -1
+  line_prev = nil
+
+  entry_max = opts[:max_entries] || -1
+  entry_curr = []
+  entry_delim = "===============================================================================\n"
+
+  lines = 0
+  entries = 0
+
+  while (line_max < 0 or lines < line_max) and
+        (entry_max < 0 or entries < entry_max)
+    line = io.gets("\n")
+    break unless line
+
+    if line == entry_delim
+      if entries > 0 # The first entry is strangely missing a timestamp.
+        block.call(entries, entry_curr[0..-2])
+      end
+
+      entries = entries + 1
+      entry_curr = [line_prev]
+    else
+      entry_curr << line
+    end
+
+    lines = lines + 1
+    line_prev = line
+  end
+
+  block.call(entries, entry_curr[0..-2])
+
+  print "MAX LINES REACHED: #{lines}\n" if lines > 0 and lines > line_max
+  print "MAX ENTRIES REACHED: #{entries}\n" if entries > 0 and entries > entry_max
+
+  print "parsed #{lines} lines, #{entries} entries\n"
+end
+
+# --------------------------------------------------------
+
+ns_server_logs.each do |f|
+  parse_ns_server_log_file(f, { :max_entries => 5 }) do |i, entry|
+    print "#{i} -----\n#{entry}\n"
+  end
+end
+
+
