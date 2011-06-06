@@ -67,7 +67,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       end
 
       # Example header...
-      # "INFO REPORT  <5881.69.0>                                    2011-06-05 22:01:05"
+      # "INFO REPORT  <5881.69.0>   ...spaces...   2011-06-05 22:01:05"
       #
       header = line_prev.split(' ')
 
@@ -133,6 +133,12 @@ if html
 
     out.write("<html>\n")
     out.write("<body>\n")
+    out.write("<style>\n")
+    out.write("tr:hover { background-color: #eee; }\n")
+    out.write("table { font-size: 6px; }\n")
+    out.write("th { vertical-align: top; white-space: nowrap; }\n")
+    out.write("td { vertical-align: top; }\n")
+    out.write("</style>\n")
 
     ns_server_logs.each do |f|
       print "html-processing #{f}\n"
@@ -149,7 +155,7 @@ if html
         if ymd and tms and pid
           if ymd != last_ymd or tms != last_tms
             if last_ymd and last_tms
-              out.write("<tr><td>#{last_ymd} #{last_tms}</td>\n<td>")
+              out.write("<tr><th>#{last_ymd}-#{last_tms}</th>\n<td>")
               out.write(row.join("</td><td>"))
               out.write("</td>\n</tr>\n")
             end
@@ -157,7 +163,7 @@ if html
             row = Array.new(agg_pids_idx.size + 1, "")
           end
 
-          row[agg_pids_idx[pid]] = "*"
+          row[agg_pids_idx[pid]] = (row[agg_pids_idx[pid]] || "") + " *"
 
           last_ymd = ymd
           last_tms = tms
