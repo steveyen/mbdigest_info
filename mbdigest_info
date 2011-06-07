@@ -1,23 +1,28 @@
 #!/usr/bin/env ruby
 
-def usage()
-  print("mbdigest_info [options] ns_server.log ...\n")
-  print("\n")
-  print("  -h / --help\n")
-  print("    Print this usage help message.\n")
-  print("\n")
-  print("  --html-prefix=<path/to/output-report-prefix>\n")
-  print("    Emit correlated analysis files in html format,\n")
-  print("    which will be named with \"-PAGENUM.html\" suffixes appended.\n")
-  print("    For example: path/to/output-report-prefix-0.html\n")
-  print("\n")
-  print("  --max-entries=<num>\n")
-  print("    Stop after processing this # of entries in the log.\n")
-  print("\n")
-  print("  --page_size=<num>\n")
-  print("    Split the html report into pages with this # of rows per page.\n")
-  print("\n")
-  exit
+def usage(msg=nil)
+  print "mbdigest_info [options] <ns_server.log>\n"
+  print "\n"
+  print "  -h / --help\n"
+  print "    Print this usage help message.\n"
+  print "\n"
+  print "  --html-prefix=<path/to/output-report>\n"
+  print "    Required. Emit correlated analysis files in html format,\n"
+  print "    which will be named with \"-PAGENUM.html\" suffixes appended.\n"
+  print "    For example: path/to/output-report-0.html\n"
+  print "\n"
+  print "  --page_size=<num>\n"
+  print "    Optional. Split the html into pages with this # of rows per page.\n"
+  print "\n"
+  print "  --max-entries=<num>\n"
+  print "    Optional. Stop after processing this # of entries in the log.\n"
+  print "\n"
+  print "Example:\n"
+  print "  ./mbdigest_info --html-prefix=out ns_server.log\n"
+  print "\n"
+  print msg + "\n" if msg
+
+  exit(-1)
 end
 
 usage() if ARGV.include?('--help')
@@ -25,14 +30,19 @@ usage() if ARGV.include?('-h')
 
 # --------------------------------------------------------
 
-html_prefix = (ARGV.select {|x| x =~ /^--html-prefix/}[-1] || "").split('=')[1]
-page_size   = (ARGV.select {|x| x =~ /^--page-size/}[-1] || "=-1").split('=')[1].to_i
-max_entries = (ARGV.select {|x| x =~ /^--max-entries/}[-1] || "=-1").split('=')[1].to_i
+ns_server_log = ARGV.select {|x| !x.match(/^--/)}[0]
+html_prefix   = (ARGV.select {|x| x =~ /^--html-prefix/}[-1] || "").split('=')[1]
+page_size     = (ARGV.select {|x| x =~ /^--page-size/}[-1] || "=-1").split('=')[1].to_i
+max_entries   = (ARGV.select {|x| x =~ /^--max-entries/}[-1] || "=-1").split('=')[1].to_i
 
-ns_server_logs = ARGV.select {|x| !x.match(/^--/)}
-ns_server_logs = ["ns_server.log"] if ns_server_logs.length <= 0
+usage("ERROR: Need a ns_server.log parameter.") unless ns_server_log
+usage("ERROR: Need a --html-prefix parameter.") unless html_prefix
 
-print "mbdigest_info #{ns_server_logs}\n"
+print "mbdigest_info #{ns_server_log}\n"
+print "  --html-prefix=#{html_prefix}\n"
+print "  --page-size=#{page_size}\n" if page_size > 0
+print "  --max_entries=#{max_entries}\n" if max_entries > 0
+print "\n"
 
 # --------------------------------------------------------
 
@@ -113,89 +123,96 @@ def dot(i)
   return i + 1
 end
 
+def close_html(out)
+  out.write("</table>\n")
+  out.write("</body>\n")
+  out.write("</html>\n")
+  out.close
+end
+
 # --------------------------------------------------------
 
 agg = { :pids => {} } # Some aggregate tracking during first pass.
 
-ns_server_logs.each do |f|
-  print "processing #{f}\n"
+print "processing #{ns_server_log}:\n"
 
-  i = 0
-  pids, entries, lines =
-    parse_ns_server_log_file(f,
-                             agg=agg,
-                             opts={ :max_entries => max_entries }) do |x, entry|
+i = 0
+pids, entries, lines =
+  parse_ns_server_log_file(ns_server_log,
+                           agg=agg,
+                           opts={ :max_entries => max_entries }) do |x, entry|
+  i = dot(i)
+end
+
+print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
+
+agg_pids = agg[:pids]
+agg_pids_idx = {} # Key is pid, value is index of pid in sorted agg_pids list.
+agg_pids.values.sort.each do |pid_info|
+  pid = pid_info[1]
+  agg_pids_idx[pid] = agg_pids_idx[pid] || (agg_pids_idx.size + 1)
+end
+
+page_size = entries if page_size <= 0
+num_pages = (entries.to_f / page_size.to_f).ceil
+
+last_page = last_ymd = last_tms = last_pid = out = row = nil
+
+i = 0
+pids, entries, lines =
+  parse_ns_server_log_file(ns_server_log,
+                           agg={},
+                           opts={ :max_entries => max_entries }) do |x, entry|
+  page = (x.to_f / page_size.to_f).floor
+  if page != last_page
+    close_html(out) if out
+
+    html = "#{html_prefix}-#{page}.html"
+
+    print "\nemitting #{html}:\n"
+
+    out = File.open(html, 'w')
+
+    out.write("<html>\n")
+    out.write("<body>\n")
+
+    out.write("<style>\n")
+    out.write("tr:hover { background-color: #eee; }\n")
+    out.write("table { font-size: 6px; border-collapse:collapse; }\n")
+    out.write("th { vertical-align: top; text-align: left; white-space: nowrap; }\n")
+    out.write("td { vertical-align: top; width: 1em; }\n")
+    out.write("</style>\n")
+
+    out.write("<h1>#{ns_server_log}</h1>\n")
+    out.write("<table>\n")
+    out.write("<tr><th>time</th><th colspan=\"#{agg_pids_idx.size}\">process events</th></tr>\n")
+
+    last_page = page
+  end
+
+  ymd, tms, pid = entry[0]
+  if ymd and tms and pid
+    if ymd != last_ymd or tms != last_tms
+      if last_ymd and last_tms
+        out.write("<tr><th>#{last_ymd}-#{last_tms}</th>\n<td>")
+        out.write(row.join("</td><td>"))
+        out.write("</td>\n</tr>\n")
+      end
+
+      row = Array.new(agg_pids_idx.size + 1, "")
+    end
+
+    row[agg_pids_idx[pid]] = (row[agg_pids_idx[pid]] || "") + " *"
+    last_ymd = ymd
+    last_tms = tms
+    last_pid = pid
+
     i = dot(i)
   end
-
-  print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
-
-  agg_pids = agg[:pids]
-  agg_pids_idx = {} # Key is pid, value is index of pid in sorted agg_pids list.
-  agg_pids.values.sort.each do |pid_info|
-    pid = pid_info[1]
-    agg_pids_idx[pid] = agg_pids_idx[pid] || (agg_pids_idx.size + 1)
-  end
-
-  page_size = entries if page_size <= 0
-  num_pages = (entries.to_f / page_size.to_f).ceil
-
-  if html_prefix
-      html = "#{html_prefix}-#{page}.html"
-
-      File.open(html, 'w') do |out|
-        print "html-processing #{html}\n"
-
-        out.write("<html>\n")
-        out.write("<body>\n")
-
-        out.write("<style>\n")
-        out.write("tr:hover { background-color: #eee; }\n")
-        out.write("table { font-size: 6px; border-collapse:collapse; }\n")
-        out.write("th { vertical-align: top; text-align: left; white-space: nowrap; }\n")
-        out.write("td { vertical-align: top; width: 1em; }\n")
-        out.write("</style>\n")
-
-        out.write("<h1>#{f}</h1>\n")
-        out.write("<table>\n")
-        out.write("<tr><th>time</th><th colspan=\"#{agg_pids_idx.size}\">process events</th></tr>\n")
-
-        last_ymd = last_tms = last_pid = row = nil
-
-        i = 0
-        pids, entries, lines =
-          parse_ns_server_log_file(f,
-                                   agg={},
-                                   opts={ :max_entries => max_entries }) do |x, entry|
-          ymd, tms, pid = entry[0]
-          if ymd and tms and pid
-            if ymd != last_ymd or tms != last_tms
-              if last_ymd and last_tms
-                out.write("<tr><th>#{last_ymd}-#{last_tms}</th>\n<td>")
-                out.write(row.join("</td><td>"))
-                out.write("</td>\n</tr>\n")
-              end
-
-              row = Array.new(agg_pids_idx.size + 1, "")
-            end
-
-            row[agg_pids_idx[pid]] = (row[agg_pids_idx[pid]] || "") + " *"
-
-            last_ymd = ymd
-            last_tms = tms
-            last_pid = pid
-
-            i = dot(i)
-          end
-        end
-
-        out.write("</table>\n")
-        out.write("</body>\n")
-        out.write("</html>\n")
-
-        print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
-      end
-  end
 end
+
+close_html(out) if out
+
+print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
 
 
