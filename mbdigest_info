@@ -180,8 +180,7 @@ pids, entries, lines =
     out.write("<style>\n")
     out.write("  .grid    { position: relative; font-size: 10px; }\n")
     out.write("  .row     { position: absolute; }\n")
-    out.write("  .row div { position: absolute; }\n")
-    out.write("  .row div:first-child { position: static; }\n")
+    out.write("  .row div { position: absolute; white-space: nowrap; }\n")
     out.write("  .row:hover { color: red; }\n")
     out.write("</style>\n")
 
