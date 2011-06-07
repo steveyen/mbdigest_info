@@ -124,7 +124,7 @@ def dot(i)
 end
 
 def close_html(out)
-  out.write("</table>\n")
+  out.write("</div>\n")
   out.write("</body>\n")
   out.write("</html>\n")
   out.close
@@ -156,7 +156,7 @@ end
 
 # --------------------------------------------------------
 
-prev_page = prev_ymd = prev_tms = prev_pid = out = row = nil
+prev_page = prev_ymd = prev_tms = prev_pid = out = nil
 
 i = rows = page = 0
 
@@ -178,32 +178,28 @@ pids, entries, lines =
     out.write("<body>\n")
 
     out.write("<style>\n")
-    out.write("  tr:hover { background-color: #eee; }\n")
-    out.write("  table { font-size: 6px; border-collapse:collapse; }\n")
-    out.write("  th { vertical-align: top; text-align: left; white-space: nowrap; }\n")
-    out.write("  td { vertical-align: top; width: 1em; }\n")
+    out.write("  .grid    { font-size: 10px; }\n")
+    out.write("  .row     { position: relative; clear: both;}\n")
+    out.write("  .row div { position: absolute; }\n")
+    out.write("  .row div:first-child { position: static; }\n")
+    out.write("  .row:hover { color: red; }\n")
     out.write("</style>\n")
 
     out.write("<h1>#{ns_server_log}</h1>\n")
-    out.write("<table>\n")
-    out.write("<tr><th>time</th><th colspan=\"#{agg_pids_idx.size}\">process events</th></tr>\n")
+
+    out.write("<div class=\"grid\">\n")
+    out.write("<div class=\"row\">\n")
   end
 
   ymd, tms, pid = entry[0]
   if ymd and tms and pid
     if ymd != prev_ymd or tms != prev_tms
-      if row
-        out.write("<tr><th>#{prev_ymd} #{prev_tms}</th>\n<td>")
-        out.write(row.join("</td><td>"))
-        out.write("</td>\n</tr>\n")
-      end
-
-      rows = rows + 1
-
-      row = Array.new(agg_pids_idx.size + 1, "")
+      out.write("</div>\n")
+      out.write("<div class=\"row\">\n")
+      out.write("<div>#{ymd} #{prev_tms}</div>")
     end
 
-    row[agg_pids_idx[pid]] = (row[agg_pids_idx[pid]] || "") + " *"
+    out.write("<div style=\"left:#{200 + agg_pids_idx[pid] * 5 }px\">W</div>")
   end
 
   prev_page = page
