@@ -158,7 +158,7 @@ end
 
 prev_page = prev_ymd = prev_tms = prev_pid = out = nil
 
-i = rows = page = 0
+i = rows = page = y = 0
 
 pids, entries, lines =
   parse_ns_server_log_file(ns_server_log,
@@ -178,8 +178,8 @@ pids, entries, lines =
     out.write("<body>\n")
 
     out.write("<style>\n")
-    out.write("  .grid    { font-size: 10px; }\n")
-    out.write("  .row     { position: relative; clear: both;}\n")
+    out.write("  .grid    { position: relative; font-size: 10px; }\n")
+    out.write("  .row     { position: absolute; }\n")
     out.write("  .row div { position: absolute; }\n")
     out.write("  .row div:first-child { position: static; }\n")
     out.write("  .row:hover { color: red; }\n")
@@ -195,11 +195,15 @@ pids, entries, lines =
   if ymd and tms and pid
     if ymd != prev_ymd or tms != prev_tms
       out.write("</div>\n")
-      out.write("<div class=\"row\">\n")
-      out.write("<div>#{ymd} #{prev_tms}</div>")
+      out.write("<div class=\"row\" style=\"top:#{i * 8}px\">\n")
+      out.write("<div>#{ymd} #{tms}</div>")
+
+      y = 0
     end
 
-    out.write("<div style=\"left:#{200 + agg_pids_idx[pid] * 5 }px\">W</div>")
+    out.write("<div style=\"top:#{y * 8}px; left:#{200 + agg_pids_idx[pid] * 10 }px\">W</div>")
+
+    y = y + 1
   end
 
   prev_page = page
