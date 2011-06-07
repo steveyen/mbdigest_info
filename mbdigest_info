@@ -195,10 +195,12 @@ pids, entries, lines =
     out.write("<body>\n")
 
     out.write("<style>\n")
-    out.write("  .grid    { position: relative; font-size: 10px; }\n")
-    out.write("  .row     { position: absolute; }\n")
-    out.write("  .row div { position: absolute; white-space: nowrap; }\n")
-    out.write("  .row:hover { color: red; }\n")
+    out.write("  .grid      { position: relative; font-size: 10px; }\n")
+    out.write("  .row       { position: absolute; width: 100%; height: 2px;}\n")
+    out.write("  .row       { position: absolute; }\n")
+    out.write("  .row div   { position: absolute; white-space: nowrap; }\n")
+    out.write("  .row:hover { background-color: #999; }\n")
+    out.write("  b { color: red; }\n")
     out.write("</style>\n")
 
     out.write("<h1>#{ns_server_log}</h1>\n")
@@ -217,7 +219,14 @@ pids, entries, lines =
       y = 0
     end
 
-    out.write("<div style=\"top:#{y * 8}px; left:#{200 + agg_pids_idx[pid] * 10 }px\">W</div>")
+    # http://en.wikipedia.org/wiki/Arrow_(symbol)
+    #
+    # &#x2717; - Ballot X
+    # &#x2718; - Heavy Ballot X
+    # &#x21e9; - Downwards thick arraw (actually looks very thin)
+    # &#x2729; - Stressed outline white star
+    #
+    out.write("<div style=\"top:#{y * 8}px; left:#{200 + agg_pids_idx[pid] * 10 }px\"><b>&#x2717;</b></div>")
 
     y = y + 1
   end
