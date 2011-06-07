@@ -17,6 +17,9 @@ def usage(msg=nil)
   print "  --max-entries=<num>\n"
   print "    Optional. Stop after processing this # of entries in the log.\n"
   print "\n"
+  print "  --verbose\n"
+  print "    Optional. More verbose.\n"
+  print "\n"
   print "Example:\n"
   print "  ./mbdigest_info --html-prefix=out ns_server.log\n"
   print "\n"
@@ -30,10 +33,11 @@ usage() if ARGV.include?('-h')
 
 # --------------------------------------------------------
 
-ns_server_log = ARGV.select {|x| !x.match(/^--/)}[0]
+ns_server_log = (ARGV.select {|x| !x.match(/^--/)})[0]
 html_prefix   = (ARGV.select {|x| x =~ /^--html-prefix/}[-1] || "").split('=')[1]
 page_size     = (ARGV.select {|x| x =~ /^--page-size/}[-1] || "=-1").split('=')[1].to_i
 max_entries   = (ARGV.select {|x| x =~ /^--max-entries/}[-1] || "=-1").split('=')[1].to_i
+verbose       = (ARGV.select {|x| x =~ /^--verbose/})[-1]
 
 usage("ERROR: Need a ns_server.log parameter.") unless ns_server_log
 usage("ERROR: Need a --html-prefix parameter.") unless html_prefix
@@ -42,6 +46,7 @@ print "mbdigest_info #{ns_server_log}\n"
 print "  --html-prefix=#{html_prefix}\n"
 print "  --page-size=#{page_size}\n" if page_size > 0
 print "  --max_entries=#{max_entries}\n" if max_entries > 0
+print "  --verbose\n" if verbose
 print "\n"
 
 # --------------------------------------------------------
@@ -87,9 +92,10 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       #
       header = line_prev.split(' ')
 
-      pid = header[2]
-      ymd = header[-2]
-      tms = header[-1]
+      kind = header[0]
+      pid  = header[2]
+      ymd  = header[-2]
+      tms  = header[-1]
 
       # An entry in pids looks like...
       #   ["#{ymd}:{tms}", pid, NumEntriesFromThisPid, FirstMessageFromThisPid]
@@ -98,7 +104,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       pids[pid][2] += 1
 
       entries = entries + 1
-      entry_curr = [[ymd, tms, pid]]
+      entry_curr = [[ymd, tms, pid, lines, kind]]
     else
       entry_curr << line
     end
@@ -142,6 +148,17 @@ pids, entries, lines =
   parse_ns_server_log_file(ns_server_log,
                            agg=agg,
                            opts={ :max_entries => max_entries }) do |x, entry|
+
+  ymd, tms, pid, lines, kind = entry[0]
+  if ymd and tms and pid
+    if verbose
+      e = entry[1..-1].join("").
+                       gsub(pid, "Pid").
+                       gsub(/ns_1@([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/, "ns_1@Ip")
+      print "#{kind}\n#{e}\n"
+    end
+  end
+
   i = dot(i)
 end
 
@@ -190,7 +207,7 @@ pids, entries, lines =
     out.write("<div class=\"row\">\n")
   end
 
-  ymd, tms, pid = entry[0]
+  ymd, tms, pid, kind = entry[0]
   if ymd and tms and pid
     if ymd != prev_ymd or tms != prev_tms
       out.write("</div>\n")
