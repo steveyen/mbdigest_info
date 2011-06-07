@@ -137,6 +137,7 @@ agg = { :pids => {} } # Some aggregate tracking during first pass.
 print "processing #{ns_server_log}:\n"
 
 i = 0
+
 pids, entries, lines =
   parse_ns_server_log_file(ns_server_log,
                            agg=agg,
@@ -153,18 +154,18 @@ agg_pids.values.sort.each do |pid_info|
   agg_pids_idx[pid] = agg_pids_idx[pid] || (agg_pids_idx.size + 1)
 end
 
-page_size = entries if page_size <= 0
-num_pages = (entries.to_f / page_size.to_f).ceil
+# --------------------------------------------------------
 
-last_page = last_ymd = last_tms = last_pid = out = row = nil
+prev_page = prev_ymd = prev_tms = prev_pid = out = row = nil
 
-i = 0
+i = rows = page = 0
+
 pids, entries, lines =
   parse_ns_server_log_file(ns_server_log,
                            agg={},
                            opts={ :max_entries => max_entries }) do |x, entry|
-  page = (x.to_f / page_size.to_f).floor
-  if page != last_page
+  page = (rows.to_f / page_size.to_f).floor if page_size > 0
+  if page != prev_page
     close_html(out) if out
 
     html = "#{html_prefix}-#{page}.html"
@@ -177,38 +178,40 @@ pids, entries, lines =
     out.write("<body>\n")
 
     out.write("<style>\n")
-    out.write("tr:hover { background-color: #eee; }\n")
-    out.write("table { font-size: 6px; border-collapse:collapse; }\n")
-    out.write("th { vertical-align: top; text-align: left; white-space: nowrap; }\n")
-    out.write("td { vertical-align: top; width: 1em; }\n")
+    out.write("  tr:hover { background-color: #eee; }\n")
+    out.write("  table { font-size: 6px; border-collapse:collapse; }\n")
+    out.write("  th { vertical-align: top; text-align: left; white-space: nowrap; }\n")
+    out.write("  td { vertical-align: top; width: 1em; }\n")
     out.write("</style>\n")
 
     out.write("<h1>#{ns_server_log}</h1>\n")
     out.write("<table>\n")
     out.write("<tr><th>time</th><th colspan=\"#{agg_pids_idx.size}\">process events</th></tr>\n")
-
-    last_page = page
   end
 
   ymd, tms, pid = entry[0]
   if ymd and tms and pid
-    if ymd != last_ymd or tms != last_tms
-      if last_ymd and last_tms
-        out.write("<tr><th>#{last_ymd}-#{last_tms}</th>\n<td>")
+    if ymd != prev_ymd or tms != prev_tms
+      if row
+        out.write("<tr><th>#{prev_ymd} #{prev_tms}</th>\n<td>")
         out.write(row.join("</td><td>"))
         out.write("</td>\n</tr>\n")
       end
+
+      rows = rows + 1
 
       row = Array.new(agg_pids_idx.size + 1, "")
     end
 
     row[agg_pids_idx[pid]] = (row[agg_pids_idx[pid]] || "") + " *"
-    last_ymd = ymd
-    last_tms = tms
-    last_pid = pid
-
-    i = dot(i)
   end
+
+  prev_page = page
+  prev_ymd  = ymd
+  prev_tms  = tms
+  prev_pid  = pid
+
+  i = dot(i)
 end
 
 close_html(out) if out
