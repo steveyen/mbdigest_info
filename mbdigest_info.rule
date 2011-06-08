@@ -1,0 +1,31 @@
+CRASH REPORT-Crash            <5881.19570.0>                2011-06-05 22:56:27
+===============================================================================
+$$$Crashing process$$$
+   initial_call                      {ebucketmigrator_srv,init,['Argument__1']}
+   pid                                                           <5881.19570.0>
+   registered_name                                                           []
+   error_info
+         {exit,retry_not_ready_vbuckets,
+              [{gen_server,terminate,6},{proc_lib,init_p_do_apply,3}]}
+   ancestors  ['ns_vbm_sup-default','single_bucket_sup-default',<5881.18801.0>]
+   messages                                                                  []
+   links                          [<5881.55.0>,<5881.18854.0>,#Port<5881.5496>]
+   dictionary                                                                []
+   trap_exit                                                               true
+   status                                                               running
+   heap_size                                                                987
+   stack_size                                                                24
+   reductions                                                             46880
+
+PROGRESS REPORT-Supervisor         <5881.18854.0>           2011-06-05 22:56:27
+===============================================================================
+$$$supervisor$$$                                   {local,'ns_vbm_sup-default'}
+$$$started$$$
+         [{pid,<5881.20042.0>},
+         {name,{child_id,[827,828,829,830],'ns_1@10.100.222.162'}},
+         {mfargs,
+             {ebucketmigrator_srv,start_link,
+                 [{"10.77.9.118",11210},
+                  {"10.100.222.162",11210},
+                  [{username,"default"},
+                   {password,[]},

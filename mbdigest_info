@@ -51,6 +51,25 @@ print "\n"
 
 # --------------------------------------------------------
 
+# http://en.wikipedia.org/wiki/Arrow_(symbol)
+#
+# lower-case keys are direct symbols.
+# upper-case keys (like Crash) are ns_server_log semantic driven.
+#
+symbols = {
+  'airplane'   => '&#x2708;',
+  'Supervisor' => '&#x2708;',
+  'heavy_checkmark' => '&#x2714;',
+  'ballot_x' => '&#x2717;',
+  'heavy_ballot_x' => '&#x2718;',
+  'Crash'          => '<b>&#x2718;</b>',
+  'down_arrow' => '&#x21e9;',
+  'white_star' => '&#x2729;',
+  'circled_white_star' => '&#x272a;',
+}
+
+# --------------------------------------------------------
+
 def parse_ns_server_log_file(file, agg={}, opts={}, &block)
   File.open(file, 'rb') {|io| parse_ns_server_log_io(io, agg, opts, &block)}
 end
@@ -92,10 +111,11 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       #
       header = line_prev.split(' ')
 
-      kind = header[0]
-      pid  = header[2]
-      ymd  = header[-2]
-      tms  = header[-1]
+      kind   = header[0]
+      report = header[1].split('-')[-1]
+      pid    = header[2]
+      ymd    = header[-2]
+      tms    = header[-1]
 
       # An entry in pids looks like...
       #   ["#{ymd}:{tms}", pid, NumEntriesFromThisPid, FirstMessageFromThisPid]
@@ -104,7 +124,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       pids[pid][2] += 1
 
       entries = entries + 1
-      entry_curr = [[ymd, tms, pid, lines, kind]]
+      entry_curr = [[ymd, tms, pid, lines, kind, report]]
     else
       entry_curr << line
     end
@@ -138,6 +158,23 @@ end
 
 # --------------------------------------------------------
 
+rules = []
+
+parse_ns_server_log_file("mbdigest_info.rule",
+                         agg={}, opts={}) do |x, entry|
+  ymd, tms, pid, lines, kind, report = entry[0]
+
+  arr = entry[1..-1].join("\n").split("$$$")
+  res = []
+  arr.each_index do |i|
+    res << arr[i] if i.modulo(2) == 1
+  end
+
+  rules << [report, res]
+end
+
+# --------------------------------------------------------
+
 agg = { :pids => {} } # Some aggregate tracking during first pass.
 
 print "processing #{ns_server_log}:\n"
@@ -148,8 +185,7 @@ pids, entries, lines =
   parse_ns_server_log_file(ns_server_log,
                            agg=agg,
                            opts={ :max_entries => max_entries }) do |x, entry|
-
-  ymd, tms, pid, lines, kind = entry[0]
+  ymd, tms, pid, lines, kind, report = entry[0]
   if ymd and tms and pid
     if verbose
       e = entry[1..-1].join("").
@@ -195,7 +231,7 @@ pids, entries, lines =
     out.write("<body>\n")
 
     out.write("<style>\n")
-    out.write("  .grid      { position: relative; font-size: 10px; }\n")
+    out.write("  .grid      { position: relative; font-size: 12px; }\n")
     out.write("  .row       { position: absolute; width: 100%; height: 2px;}\n")
     out.write("  .row       { position: absolute; }\n")
     out.write("  .row div   { position: absolute; white-space: nowrap; }\n")
@@ -209,7 +245,7 @@ pids, entries, lines =
     out.write("<div class=\"row\">\n")
   end
 
-  ymd, tms, pid, kind = entry[0]
+  ymd, tms, pid, kind, report = entry[0]
   if ymd and tms and pid
     if ymd != prev_ymd or tms != prev_tms
       out.write("</div>\n")
@@ -219,14 +255,18 @@ pids, entries, lines =
       y = 0
     end
 
-    # http://en.wikipedia.org/wiki/Arrow_(symbol)
-    #
-    # &#x2717; - Ballot X
-    # &#x2718; - Heavy Ballot X
-    # &#x21e9; - Downwards thick arraw (actually looks very thin)
-    # &#x2729; - Stressed outline white star
-    #
-    out.write("<div style=\"top:#{y * 8}px; left:#{200 + agg_pids_idx[pid] * 10 }px\"><b>&#x2717;</b></div>")
+    txt = entry.join("\n")
+    val = '*'
+
+    rules.each do |rule|
+      symbol, patterns = rule
+
+      if (patterns.count {|p| txt.match(p)}) == patterns.length
+        val = symbols[symbol]
+      end
+    end
+
+    out.write("<div style=\"top:#{y * 8}px; left:#{200 + agg_pids_idx[pid] * 10 }px\">#{val}</div>")
 
     y = y + 1
   end
