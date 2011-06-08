@@ -60,9 +60,9 @@ symbols = {
   'airplane'   => '&#x2708;',
   'Supervisor' => '&#x2708;',
   'heavy_checkmark' => '&#x2714;',
-  'ballot_x' => '&#x2717;',
-  'heavy_ballot_x' => '&#x2718;',
-  'Crash'          => '<b>&#x2718;</b>',
+  'ballot_x'        => '&#x2717;',
+  'heavy_ballot_x'  => '&#x2718;',
+  'Crash'           => '<b>&#x2718;</b>',
   'down_arrow' => '&#x21e9;',
   'white_star' => '&#x2729;',
   'circled_white_star' => '&#x272a;',
@@ -266,7 +266,9 @@ pids, entries, lines =
       end
     end
 
-    out.write("<div style=\"top:#{y * 8}px; left:#{200 + agg_pids_idx[pid] * 10 }px\">#{val}</div>")
+    out.write("<div style=\"top:#{y * 8}px;")
+    out.write(             "left:#{200 + agg_pids_idx[pid] * 10 }px\">")
+    out.write(   "#{val}</div>")
 
     y = y + 1
   end
