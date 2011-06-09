@@ -1,28 +1,30 @@
 #!/usr/bin/env ruby
 
 def usage(msg=nil)
-  print "mbdigest_info [options] <ns_server.log>\n"
-  print "\n"
-  print "  -h / --help\n"
-  print "    Print this usage help message.\n"
-  print "\n"
-  print "  --html-prefix=<path/to/output-report>\n"
-  print "    Required. Emit correlated analysis files in html format,\n"
-  print "    which will be named with \"-PAGENUM.html\" suffixes appended.\n"
-  print "    For example: path/to/output-report-0.html\n"
-  print "\n"
-  print "  --page_size=<num>\n"
-  print "    Optional. Split the html into pages with this # of rows per page.\n"
-  print "\n"
-  print "  --max-entries=<num>\n"
-  print "    Optional. Stop after processing this # of entries in the log.\n"
-  print "\n"
-  print "  --verbose\n"
-  print "    Optional. More verbose.\n"
-  print "\n"
-  print "Example:\n"
-  print "  ./mbdigest_info --html-prefix=out ns_server.log\n"
-  print "\n"
+  print <<-EOS
+mbdigest_info [options] <ns_server.log>
+
+  -h / --help
+    Print this usage help message.
+
+  --html-prefix=<path/to/output-report>
+    Required. Emit correlated analysis files in html format,
+    which will be named with \"-PAGENUM.html\" suffixes appended.
+    For example: path/to/output-report-0.html
+
+  --page_size=<num>
+    Optional. Split the html into pages with this # of rows per page.
+
+  --max-entries=<num>
+    Optional. Stop after processing this # of entries in the log.
+
+  --verbose
+    Optional. More verbose.
+
+Example:
+  ./mbdigest_info --html-prefix=out ns_server.log
+EOS
+
   print msg + "\n" if msg
 
   exit(-1)
