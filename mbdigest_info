@@ -64,6 +64,8 @@ symbols = {
   'heavy_checkmark'    => '&#x2714;',
   'ballot_x'           => '&#x2717;',
   'heavy_ballot_x'     => '&#x2718;',
+  'latin_cross'        => '&#x271D;',
+  'heart'              => '&#x2764;',
   'down_arrow'         => '&#x21e9;',
   'white_star'         => '&#x2729;',
   'circled_white_star' => '&#x272a;',
@@ -72,7 +74,9 @@ symbols = {
   'Supervisor'         => '&#x2708;',
   'Config'             => '&#x2709;',
   'Crash'              => '<b>&#x2718;</b>',
+  'NodeDown'           => '&#x271D;',
   'NodeStatus'         => '&#x2729;',
+  'Heart'              => '&#x2764;',
 }
 
 # --------------------------------------------------------
@@ -265,8 +269,7 @@ pids, entries, lines, bytes =
     out.write("  .row       { position: absolute; }\n")
     out.write("  .row div   { position: absolute; white-space: nowrap; }\n")
     out.write("  .row:hover { background-color: #999; }\n")
-    out.write("  .pid       { color: white; border-left: 1px solid #f0f0f0; position: absolute; }\n")
-    out.write("  .pid:hover { color: black; border-left: 1px solid #999; z-index: 1; }\n")
+    out.write("  .row div:hover { background-color: #cfc; }\n")
     out.write("  b { color: red; }\n")
     out.write("</style>\n")
     out.write("</head>\n")
