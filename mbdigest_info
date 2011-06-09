@@ -13,7 +13,7 @@ mbdigest_info [options] <ns_server.log>
     For example: path/to/output-report-0.html
 
   --page_size=<num>
-    Optional. Split the html into pages with this # of rows per page.
+    Optional. Split the html into pages with this # of entries per page.
 
   --max-entries=<num>
     Optional. Stop after processing this # of entries in the log.
@@ -59,15 +59,16 @@ print "\n"
 # upper-case keys (like Crash) are ns_server_log semantic driven.
 #
 symbols = {
-  'airplane'   => '&#x2708;',
-  'Supervisor' => '&#x2708;',
-  'heavy_checkmark' => '&#x2714;',
-  'ballot_x'        => '&#x2717;',
-  'heavy_ballot_x'  => '&#x2718;',
-  'Crash'           => '<b>&#x2718;</b>',
-  'down_arrow' => '&#x21e9;',
-  'white_star' => '&#x2729;',
+  'airplane'           => '&#x2708;',
+  'heavy_checkmark'    => '&#x2714;',
+  'ballot_x'           => '&#x2717;',
+  'heavy_ballot_x'     => '&#x2718;',
+  'down_arrow'         => '&#x21e9;',
+  'white_star'         => '&#x2729;',
   'circled_white_star' => '&#x272a;',
+
+  'Supervisor'         => '&#x2708;',
+  'Crash'              => '<b>&#x2718;</b>',
 }
 
 # --------------------------------------------------------
@@ -86,6 +87,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
 
   pids = agg[:pids] || {}
   lines = 0
+  bytes = 0
   entries = 0
 
   pid = ymd = tms = nil
@@ -126,11 +128,12 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       pids[pid][2] += 1
 
       entries = entries + 1
-      entry_curr = [[ymd, tms, pid, lines, kind, report]]
+      entry_curr = [[ymd, tms, pid, lines, bytes, kind, report]]
     else
       entry_curr << line
     end
 
+    bytes = bytes + line.length
     lines = lines + 1
     line_prev = line
   end
@@ -140,7 +143,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
   print "MAX LINES REACHED: #{lines}\n" if line_max >= 0 and lines >= line_max
   print "MAX ENTRIES REACHED: #{entries}\n" if entry_max >= 0 and entries >= entry_max
 
-  return pids, entries, lines
+  return pids, entries, lines, bytes
 end
 
 def dot(i)
@@ -153,6 +156,17 @@ end
 
 def close_html(out)
   out.write("</div>\n")
+
+  out.write("<script>\n")
+
+  out.write <<EOS
+document.getElementById("grid").onclick = function(e) {
+  alert('hi ' + e + ' ' + e.target);
+}
+EOS
+
+  out.write("</script>\n")
+
   out.write("</body>\n")
   out.write("</html>\n")
   out.close
@@ -164,7 +178,7 @@ rules = []
 
 parse_ns_server_log_file("mbdigest_info.rule",
                          agg={}, opts={}) do |x, entry|
-  ymd, tms, pid, lines, kind, report = entry[0]
+  ymd, tms, pid, lines, bytes, kind, report = entry[0]
 
   arr = entry[1..-1].join("\n").split("$$$")
   res = []
@@ -183,11 +197,11 @@ print "processing #{ns_server_log}:\n"
 
 i = 0
 
-pids, entries, lines =
+pids, entries, lines, bytes =
   parse_ns_server_log_file(ns_server_log,
                            agg=agg,
                            opts={ :max_entries => max_entries }) do |x, entry|
-  ymd, tms, pid, lines, kind, report = entry[0]
+  ymd, tms, pid, lines, bytes, kind, report = entry[0]
   if ymd and tms and pid
     if verbose
       e = entry[1..-1].join("").
@@ -213,13 +227,13 @@ end
 
 prev_page = prev_ymd = prev_tms = prev_pid = out = nil
 
-i = rows = page = y = 0
+i = page = y = 0
 
-pids, entries, lines =
+pids, entries, lines, bytes =
   parse_ns_server_log_file(ns_server_log,
                            agg={},
                            opts={ :max_entries => max_entries }) do |x, entry|
-  page = (rows.to_f / page_size.to_f).floor if page_size > 0
+  page = (x.to_f / page_size.to_f).floor if page_size > 0
   if page != prev_page
     close_html(out) if out
 
@@ -243,7 +257,7 @@ pids, entries, lines =
 
     out.write("<h1>#{ns_server_log}</h1>\n")
 
-    out.write("<div class=\"grid\">\n")
+    out.write("<div class=\"grid\" id=\"grid\">\n")
     out.write("<div class=\"row\">\n")
   end
 
