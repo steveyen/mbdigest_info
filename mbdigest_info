@@ -104,7 +104,7 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
         # Record tne first entry for a pid.
         #
         if pid
-          pids[pid][3] = pids[pid][3] || entry_curr[0..-2]
+          pids[pid][4] = pids[pid][4] || entry_curr[0..-2]
         end
 
         block.call(entries, entry_curr[0..-2])
@@ -121,11 +121,11 @@ def parse_ns_server_log_io(io, agg={}, opts={}, &block)
       ymd    = header[-2]
       tms    = header[-1]
 
-      # An entry in pids looks like...
-      #   ["#{ymd}:{tms}", pid, NumEntriesFromThisPid, FirstMessageFromThisPid]
+      # A value in pids looks like...
+      #   ["#{ymd}:{tms}", FirstEntryByteOffset, pid, NumEntriesFromThisPid, FirstEntry]
       #
-      pids[pid] = (pids[pid] || [ymd +":" + tms, pid, 0])
-      pids[pid][2] += 1
+      pids[pid] = (pids[pid] || [ymd +":" + tms, bytes, pid, 0, nil])
+      pids[pid][3] += 1
 
       entries = entries + 1
       entry_curr = [[ymd, tms, pid, lines, bytes, kind, report]]
@@ -160,9 +160,9 @@ def close_html(out)
   out.write("<script>\n")
 
   out.write <<EOS
-document.getElementById("grid").onclick = function(e) {
-  alert('hi ' + e + ' ' + e.target);
-}
+    document.getElementById("grid").onclick = function(e) {
+      alert('hi ' + e + ' ' + e.target + ' ' + e.target.id);
+    };
 EOS
 
   out.write("</script>\n")
@@ -218,12 +218,16 @@ print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
 
 agg_pids = agg[:pids]
 agg_pids_idx = {} # Key is pid, value is index of pid in sorted agg_pids list.
-agg_pids.values.sort.each do |pid_info|
-  pid = pid_info[1]
+agg_pids_sorted = agg_pids.values.sort
+agg_pids_sorted.each do |pid_info|
+  pid = pid_info[2]
   agg_pids_idx[pid] = agg_pids_idx[pid] || (agg_pids_idx.size + 1)
 end
 
 # --------------------------------------------------------
+
+entry_left  = 200
+entry_width = 10
 
 prev_page = prev_ymd = prev_tms = prev_pid = out = nil
 
@@ -252,26 +256,51 @@ pids, entries, lines, bytes =
     out.write("  .row       { position: absolute; }\n")
     out.write("  .row div   { position: absolute; white-space: nowrap; }\n")
     out.write("  .row:hover { background-color: #999; }\n")
+    out.write("  .pid       { color: white; border-left: 1px solid #f0f0f0; position: absolute; }\n")
+    out.write("  .pid:hover { color: black; border-left: 1px solid #999; z-index: 1; }\n")
     out.write("  b { color: red; }\n")
     out.write("</style>\n")
 
     out.write("<h1>#{ns_server_log}</h1>\n")
 
     out.write("<div class=\"grid\" id=\"grid\">\n")
+
+    if false
+      agg_pids_sorted.each do |pid_info|
+        ymdtms, first_entry_byte_offset, pid, total_entries, first_entry = pid_info
+        out.write("<div class=\"pid\" style=\"left:#{entry_left + agg_pids_idx[pid] * entry_width}px;\">\n")
+        out.write(  "#{ymdtms}<br>")
+        out.write(  "pid: #{pid}<br>")
+        out.write(  "num: #{total_entries}<br>")
+        out.write(  "<pre>#{first_entry}</pre>")
+        out.write("</div>\n")
+      end
+    end
+
     out.write("<div class=\"row\">\n")
   end
 
-  ymd, tms, pid, kind, report = entry[0]
+  ymd, tms, pid, lines, bytes, kind, report = entry[0]
   if ymd and tms and pid
     if ymd != prev_ymd or tms != prev_tms
       out.write("</div>\n")
-      out.write("<div class=\"row\" style=\"top:#{i * 8}px\">\n")
+      out.write("<div class=\"row\" id=\"r_#{bytes}\" style=\"top:#{i * 8}px\">\n")
       out.write("<div>#{ymd} #{tms}</div>")
 
       y = 0
     end
 
     txt = entry.join("\n")
+
+    pid_ymdtms, first_entry_byte_offset, pid, pid_total_entries, pid_first_entry = pid_info = agg_pids[pid]
+
+    if false and first_entry_byte_offset == bytes
+      out.write("<div class=\"pid\" style=\"top:#{y * 8}px; left:#{entry_left + agg_pids_idx[pid] * entry_width}px;\">\n")
+      out.write(  "#{pid}<br>\n")
+      out.write(  "<pre>#{txt}</pre>\n")
+      out.write("</div>\n")
+    end
+
     val = '*'
 
     rules.each do |rule|
@@ -283,8 +312,9 @@ pids, entries, lines, bytes =
     end
 
     out.write("<div style=\"top:#{y * 8}px;")
-    out.write(             "left:#{200 + agg_pids_idx[pid] * 10 }px\">")
-    out.write(   "#{val}</div>")
+    out.write(             "left:#{entry_left + agg_pids_idx[pid] * entry_width}px;\"")
+    out.write(    " id=\"e_#{bytes}\">")
+    out.write(    "#{val}</div>")
 
     y = y + 1
   end
