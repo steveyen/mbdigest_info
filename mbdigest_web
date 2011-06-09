@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'sinatra'
+
+file = ARGV[0]
+
+get '/show/:offset' do |offset|
+  offset = offset.to_i
+  if offset >= 0
+    File.open(file, 'rb') do |io|
+      io.seek(offset)
+      "<html><body><pre>" + (io.read(16000) || "EOF") + "</pre></body></html>"
+    end
+  end
+end
