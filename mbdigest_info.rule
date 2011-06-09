@@ -29,3 +29,70 @@ $$$started$$$
                   {"10.100.222.162",11210},
                   [{username,"default"},
                    {password,[]},
+
+INFO REPORT-NodeStatus  <5881.196.0>                        2011-06-05 22:08:05
+===============================================================================
+
+ns_1@10.77.9.118:<5881.196.0>:$$$ns_doctor$$$:86: $$$Current node statuses$$$:
+[{'ns_1@10.77.9.118',
+     [{last_heard,{1307,311680,568501}},
+      {active_buckets,[]},
+      {ready_buckets,[]},
+      {replication,[]},
+      {memory,
+          [{total,27387392},
+           {processes,7593144},
+           {processes_used,7573328},
+           {system,19794248},
+           {atom,777321},
+           {atom_used,755971},
+           {binary,1493456},
+           {code,7194451},
+           {ets,843192}]},
+      {system_stats,
+          [{cpu_utilization_rate,0.24154589371980675},
+           {swap_total,0},
+           {swap_used,0}]},
+      {interesting_stats,[]},
+      {cluster_compatibility_version,1},
+      {version,
+          [{os_mon,"2.2.5"},
+           {mnesia,"4.4.17"},
+           {kernel,"2.14.3"},
+           {sasl,"2.1.9.3"},
+           {ns_server,"1.7.0r-9-g1aace3f"},
+           {stdlib,"1.17.3"}]},
+      {system_arch,"x86_64-unknown-linux-gnu"},
+      {wall_clock,415},
+      {memory_data,{7836213248,649093120,{<5881.173.0>,2576912}}},
+      {disk_data,[{"/",36124288,4},{"/dev/shm",3826276,1}]},
+      {meminfo,
+          <<"MemTotal:        7652552 kB\nMemFree:         7018672 kB\nBuffers:          133376 kB\nCached:           373876 kB\nSwapCached:            0 kB\nActive:           285856 kB\nInactive:         274296 kB\nActive(anon):      52912 kB\nInactive(anon):       36 kB\nActive(file):     232944 kB\nInactive(file):   274260 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\nDirty:                28 kB\nWriteback:             0 kB\nAnonPages:         52920 kB\nMapped:             7568 kB\nShmem:                40 kB\nSlab:              41876 kB\nSReclaimable:      36416 kB\nSUnreclaim:         5460 kB\nKernelStack:         864 kB\nPageTables:         2292 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:     3826276 kB\nCommitted_AS:     244200 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       24252 kB\nVmallocChunk:   34359714040 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nDirectMap4k:     7864320 kB\nDirectMap2M:           0 kB\n">>},
+      {system_memory_data,
+          [{system_total_memory,7836213248},
+           {free_swap,0},
+           {total_swap,0},
+           {cached_memory,382849024},
+           {buffered_memory,136577024},
+           {free_memory,7187120128},
+           {total_memory,7836213248}]},
+      {statistics,
+          [{wall_clock,{405706,0}},
+           {context_switches,{48969,0}},
+           {garbage_collection,{7485,13147216,0}},
+           {io,{{input,8460282},{output,3059011}}},
+           {reductions,{6249102,177322}},
+           {run_queue,0},
+           {runtime,{1960,50}}]}]}]
+
+INFO REPORT-Config  <5881.1508.0>                           2011-06-05 22:21:04
+===============================================================================
+
+ns_1@10.77.9.118:<5881.1508.0>$$$:ns_config_rep:$$$257: Pulling config from: 'ns_1@10.83.113.15'
+
+INFO REPORT-Config  <5881.165.0>                            2011-06-05 22:12:19
+===============================================================================
+
+$$$config change:$$$
+{node,'ns_1@10.38.11.106',isasl} ->
+[{path,"/opt/membase/var/lib/membase/data/isasl.pw"}]

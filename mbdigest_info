@@ -60,15 +60,19 @@ print "\n"
 #
 symbols = {
   'airplane'           => '&#x2708;',
+  'envelope'           => '&#x2709;',
   'heavy_checkmark'    => '&#x2714;',
   'ballot_x'           => '&#x2717;',
   'heavy_ballot_x'     => '&#x2718;',
   'down_arrow'         => '&#x21e9;',
   'white_star'         => '&#x2729;',
   'circled_white_star' => '&#x272a;',
+  'airplane'           => '&#x2708;',
 
   'Supervisor'         => '&#x2708;',
+  'Config'             => '&#x2709;',
   'Crash'              => '<b>&#x2718;</b>',
+  'NodeStatus'         => '&#x2729;',
 }
 
 # --------------------------------------------------------
@@ -291,7 +295,7 @@ pids, entries, lines, bytes =
       symbol, patterns = rule
 
       if (patterns.count {|p| txt.match(p)}) == patterns.length
-        val = symbols[symbol]
+        val = symbols[symbol] || '?'
       end
     end
 
