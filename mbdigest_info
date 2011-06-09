@@ -161,7 +161,12 @@ def close_html(out)
 
   out.write <<EOS
     document.getElementById("grid").onclick = function(e) {
-      alert('hi ' + e + ' ' + e.target + ' ' + e.target.id);
+      if (e.target.id != null) {
+        var offset = e.target.id.split('_')[1];
+        if (offset) {
+          window.open("http://127.0.0.1:4567/show/" + offset, "ns_server_log")
+        }
+      }
     };
 EOS
 
@@ -285,7 +290,7 @@ pids, entries, lines, bytes =
     if ymd != prev_ymd or tms != prev_tms
       out.write("</div>\n")
       out.write("<div class=\"row\" id=\"r_#{bytes}\" style=\"top:#{i * 8}px\">\n")
-      out.write("<div>#{ymd} #{tms}</div>")
+      out.write("<div id=\"t_#{bytes}\">#{ymd} #{tms}</div>")
 
       y = 0
     end
