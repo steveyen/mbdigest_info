@@ -168,10 +168,13 @@ def close_html(out)
   out.write("<script>\n")
 
   out.write <<EOS
+    var offset_last = null;
     document.getElementById("grid").onmouseover = function(e) {
       if (e.target.id != null) {
         var offset = e.target.id.split('_')[1];
-        if (offset) {
+        if (offset &&
+            offset != offset_last) {
+          offset_last = offset;
           window.open("http://127.0.0.1:4567/show/" + offset, "ns_server_log")
         }
       }
