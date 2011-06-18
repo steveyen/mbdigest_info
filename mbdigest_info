@@ -187,6 +187,8 @@ end
 
 # --------------------------------------------------------
 
+# Parse rules file.
+#
 rules = []
 
 parse_ns_server_log_file("mbdigest_info.rule",
@@ -204,40 +206,11 @@ end
 
 # --------------------------------------------------------
 
-agg = { :pids => {} } # Some aggregate tracking during first pass.
-
 print "processing #{ns_server_log}:\n"
 
-i = 0
+agg = { :pids => {} } # Some aggregate tracking.
 
-pids, entries, lines, bytes =
-  parse_ns_server_log_file(ns_server_log,
-                           agg=agg,
-                           opts={ :max_entries => max_entries }) do |x, entry|
-  ymd, tms, pid, lines, bytes, kind, report = entry[0]
-  if ymd and tms and pid
-    if verbose
-      e = entry[1..-1].join("").
-                       gsub(pid, "Pid").
-                       gsub(/ns_1@([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/, "ns_1@Ip")
-      print "#{kind}\n#{e}\n"
-    end
-  end
-
-  i = dot(i)
-end
-
-print "\nDONE: #{lines} lines, #{entries} entries, #{pids.size} pids\n"
-
-agg_pids = agg[:pids]
-agg_pids_idx = {} # Key is pid, value is index of pid in sorted agg_pids list.
-agg_pids_sorted = agg_pids.values.sort
-agg_pids_sorted.each do |pid_info|
-  pid = pid_info[2]
-  agg_pids_idx[pid] = agg_pids_idx[pid] || (agg_pids_idx.size + 1)
-end
-
-# --------------------------------------------------------
+pid_idx = {} # Key is pid, value is index of pid when first seen.
 
 entry_left  = 200
 entry_width = 10
@@ -248,7 +221,7 @@ i = page = y = 0
 
 pids, entries, lines, bytes =
   parse_ns_server_log_file(ns_server_log,
-                           agg={},
+                           agg=agg,
                            opts={ :max_entries => max_entries }) do |x, entry|
   page = (x.to_f / page_size.to_f).floor if page_size > 0
   if page != prev_page
@@ -282,6 +255,9 @@ pids, entries, lines, bytes =
   end
 
   ymd, tms, pid, lines, bytes, kind, report = entry[0]
+
+  pid_idx[pid] = pid_idx[pid] || (pid_idx.size + 1)
+
   if ymd and tms and pid
     if ymd != prev_ymd or tms != prev_tms
       out.write("</div>\n")
@@ -303,7 +279,7 @@ pids, entries, lines, bytes =
     end
 
     out.write("<div style=\"top:#{y * 8}px;")
-    out.write(             "left:#{entry_left + agg_pids_idx[pid] * entry_width}px;\"")
+    out.write(             "left:#{entry_left + pid_idx[pid] * entry_width}px;\"")
     out.write(    " id=\"e_#{bytes}\">")
     out.write(    "#{val}</div>")
 
