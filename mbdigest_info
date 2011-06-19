@@ -215,8 +215,10 @@ agg = { :pids => {} } # Some aggregate tracking.
 
 pid_idx = {} # Key is pid, value is index of pid when first seen.
 
-entry_left  = 200
-entry_width = 10
+entry_left   = 200
+entry_width  = 10
+entry_width2 = entry_width / 2
+entry_height = 8
 
 prev_page = prev_ymd = prev_tms = prev_pid = out = nil
 
@@ -245,7 +247,17 @@ pids, entries, lines, bytes =
     out.write("  .row       { position: absolute; }\n")
     out.write("  .row div   { position: absolute; white-space: nowrap; }\n")
     out.write("  .row:hover { background-color: #999; }\n")
-    out.write("  .row div:hover { background-color: #cfc; }\n")
+    out.write("  .row .entry:hover { background-color: #cfc; z-index: 1; }\n")
+    out.write("  .row .edge { border-top: 1px solid #9c9;" +
+                            " border-left: 1px solid #9c9;" +
+                            " border-right: 1px solid #9c9;" +
+                            " border-top-left-radius: 10000px;" +
+                            " border-top-right-radius: 10000px;" +
+                            " z-index: -1; }\n")
+    out.write("  .row .edgeb { border-left: 1px solid white;" +
+                             " border-right: 1px solid white;" +
+                             " border-bottom: 1px solid white;" +
+                             " z-index: -1; }\n")
     out.write("  b { color: red; }\n")
     out.write("</style>\n")
     out.write("</head>\n")
@@ -281,10 +293,44 @@ pids, entries, lines, bytes =
       end
     end
 
-    out.write("<div style=\"top:#{y * 8}px;")
-    out.write(             "left:#{entry_left + pid_idx[pid] * entry_width}px;\"")
+    pid_top = y * entry_height
+    pid_left = entry_left + pid_idx[pid] * entry_width
+
+    out.write("<div class=\"entry\"")
+    out.write(    " style=\"top:#{pid_top}px;")
+    out.write(             "left:#{pid_left}px;\"")
     out.write(    " id=\"e_#{bytes}\">")
-    out.write(    "#{val}</div>")
+    out.write(    "#{val}")
+    out.write("</div>")
+
+    txt_pids = txt.scan(/<[0-9]+\.[0-9]+\.[0-9]+>/).select {|p| p != pid }
+    txt_pids.each do |p|
+      p_idx = pid_idx[p] = pid_idx[p] || (pid_idx.size + 1)
+      p_left = entry_left + p_idx * entry_width
+
+      left = pid_left + entry_width2
+      right = p_left + entry_width2
+      if left < pid_left
+        left = p_left + entry_width2
+        right = pid_left + entry_width2
+      end
+      width = right - left
+      height = width
+
+      out.write("<div class=\"edge\"")
+      out.write(    " style=\"top:#{pid_top - (height / 2) + (entry_width / 2)}px;")
+      out.write(             "left:#{left}px;")
+      out.write(             "width:#{width}px;")
+      out.write(             "height:#{height}px;\">")
+      out.write("</div>")
+
+      out.write("<div class=\"edgeb\"")
+      out.write(    " style=\"top:#{pid_top - (height / 2) + (entry_width / 2)}px;")
+      out.write(             "left:#{left}px;")
+      out.write(             "width:#{width}px;")
+      out.write(             "height:#{height}px;\">")
+      out.write("</div>")
+    end
 
     y = y + 1
   end
